@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 20
-MAX_CHARS = 5000
+MAX_CHARS = 3000
 _USER_AGENT = "Mozilla/5.0 (compatible; ai-news-crawler/1.0)"
 
 

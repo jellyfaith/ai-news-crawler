@@ -14,6 +14,9 @@ from src.rss_fetcher import FeedEntry
 
 logger = logging.getLogger(__name__)
 
+_MAX_OUTPUT_TOKENS = 8192
+"""Leave enough headroom for 2-3 × ~1500 word articles in JSON."""
+
 # Note: the word "JSON" in the prompt is required by json_object response mode.
 _PROMPT = """\
 你是一个资深的 AI 领域技术编辑。你的任务是从提供的新闻素材中挑选最有价值的 2-3 条，为每条撰写一篇深度中文长文。
@@ -41,7 +44,7 @@ _PROMPT = """\
       "title": "示例标题",
       "description": "一句话摘要",
       "tags": ["ai-update", "模型"],
-      "body": "## 背景\\n\\n正文内容...\\n\\n## 分析\\n\\n更多内容..."
+      "body": "## 背景\\n\\n正文内容...\\n\\n## 分析\\n\\n更多内容...\\n\\n---\\n[来源](https://...)"
     }
   ]
 }
@@ -87,10 +90,10 @@ def summarize_batch(entries: list[FeedEntry]) -> list[dict]:
     ]
 
     logger.info(
-        "Sending ~%d entries to LLM (%s), expecting ~%d articles",
+        "Sending ~%d entries to LLM (%s), max_tokens=%s",
         len(entries),
         Config.LLM_MODEL,
-        Config.MAX_ARTICLES,
+        _MAX_OUTPUT_TOKENS,
     )
 
     try:
@@ -98,6 +101,7 @@ def summarize_batch(entries: list[FeedEntry]) -> list[dict]:
             model=Config.LLM_MODEL,
             messages=messages,
             temperature=0.7,
+            max_tokens=_MAX_OUTPUT_TOKENS,
             response_format={"type": "json_object"},
         )
     except Exception:
@@ -106,11 +110,13 @@ def summarize_batch(entries: list[FeedEntry]) -> list[dict]:
 
     raw = resp.choices[0].message.content or '{"articles": []}'
 
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        logger.error("LLM returned invalid JSON: %s", raw[:300])
-        raise
+    # ------------------------------------------------------------------
+    # 3. Parse JSON with repair fallback for truncated output
+    # ------------------------------------------------------------------
+    data = _parse_json_safe(raw)
+    if data is None:
+        logger.error("Failed to parse LLM output. Raw snippet:\n%s", raw[:500])
+        return []
 
     articles = data if isinstance(data, list) else data.get("articles", [data])
     if not isinstance(articles, list):
@@ -130,3 +136,23 @@ def summarize_batch(entries: list[FeedEntry]) -> list[dict]:
 
     logger.info("LLM generated %d articles", len(valid))
     return valid
+
+
+def _parse_json_safe(raw: str) -> dict | list | None:
+    """Try ``json.loads`` first, fall back to ``json_repair``.
+
+    Returns ``None`` when both fail.
+    """
+    # Fast path — standard parse
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+
+    # Fallback — repair truncated JSON
+    try:
+        from json_repair import repair_json  # type: ignore[import-untyped]
+        repaired = repair_json(raw)
+        return json.loads(repaired)
+    except Exception:
+        return None
