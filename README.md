@@ -82,7 +82,7 @@ export LLM_API_KEY=sk-your-key
 export MY_BLOG_REPO_TOKEN=ghp_your-token
 
 # 3. 运行
-python src/main.py
+python -m src.main
 ```
 
 ## GitHub Actions
