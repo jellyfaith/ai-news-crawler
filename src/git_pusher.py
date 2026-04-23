@@ -41,6 +41,8 @@ def push_files(local_files: list[Path]) -> None:
 
     # Check if there are changes
     _run_git(["add", "."], cwd=clone_dir)
+    _run_git(["config", "user.name", "github-actions[bot]"], cwd=clone_dir)
+    _run_git(["config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"], cwd=clone_dir)
     status = _run_git(["status", "--porcelain"], cwd=clone_dir, capture=True)
     if not status.strip():
         logger.info("No new changes — skipping commit and push.")
