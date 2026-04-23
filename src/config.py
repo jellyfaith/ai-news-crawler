@@ -8,7 +8,7 @@ class Config:
 
     # LLM
     LLM_API_KEY: str = os.environ.get("LLM_API_KEY", "")
-    LLM_BASE_URL: str = os.environ.get("LLM_BASE_URL", "https://api.deepseek.com/v1")
+    LLM_BASE_URL: str = os.environ.get("LLM_BASE_URL") or "https://api.deepseek.com/v1"
     LLM_MODEL: str = os.environ.get("LLM_MODEL", "deepseek-chat")
 
     # Blog repo
