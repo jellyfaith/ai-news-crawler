@@ -34,26 +34,31 @@ def main() -> None:
 
     state = StateManager()
 
-    # 1. Fetch RSS entries (unprocessed only)
-    entries = fetch_all(state)
-    if not entries:
+    # 1. 获取所有未处理的 RSS 条目
+    all_entries = fetch_all(state)
+    if not all_entries:
         logger.info("No new entries — nothing to do.")
         return
 
-    logger.info("Processing %d new entries …", len(entries))
+    all_entry_ids = [e.id for e in all_entries]
 
-    # 2. LLM summarisation
-    summaries = summarize_batch(entries)
+    # 限制只把最新的 10 条发给 LLM，省钱且防报错
+    entries_to_process = all_entries[:10]
 
-    # 3. Generate .md files in a temporary local directory
+    logger.info("Fetched %d entries, but only processing the top %d ...", len(all_entries), len(entries_to_process))
+
+    # 2. LLM 处理
+    summaries = summarize_batch(entries_to_process)
+
+    # 3. 生成本地的 .md 文件
     output_dir = f".out/{date.today().isoformat()}"
-    files = generate_md(entries, summaries, output_dir)
+    files = generate_md(entries_to_process, summaries, output_dir)
 
-    # 4. Push to blog repo
+    # 4. 跨仓库推送到你的博客
     push_files(files)
 
-    # 5. Persist dedup state
-    state.mark_batch([e.id for e in entries])
+    # 5. 保存状态（把今天抓到的所有 700 多条历史记录全部标记为已读）
+    state.mark_batch(all_entry_ids)
     state.save()
 
     logger.info("Workflow complete — %d article(s) published.", len(files))

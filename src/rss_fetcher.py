@@ -1,10 +1,12 @@
 """Fetch and parse RSS feeds."""
 
+import html
 import logging
 from dataclasses import dataclass
 
 import feedparser
 import requests
+from bs4 import BeautifulSoup
 
 from src.config import Config
 from src.state_manager import StateManager
@@ -21,6 +23,21 @@ class FeedEntry:
     link: str
     summary: str
     id: str
+
+
+def clean_html_content(raw_content: str) -> str:
+    """清理 RSS 中的 HTML 标签和转义字符，只保留纯文本。"""
+    if not raw_content:
+        return ""
+    
+    # 1. 把 &lt; 还原成 < 等正常的 HTML 标签
+    unescaped_text = html.unescape(raw_content)
+    
+    # 2. 用 BeautifulSoup 剥离所有 HTML 标签，只留下纯文字
+    soup = BeautifulSoup(unescaped_text, "html.parser")
+    clean_text = soup.get_text(separator=" ", strip=True) 
+    
+    return clean_text
 
 
 def fetch_all(state: StateManager) -> list[FeedEntry]:
@@ -62,20 +79,23 @@ def _parse_item(item: dict, source_name: str) -> FeedEntry | None:
     """
     title = _get(item, "title")
     link = _get(item, "link")
-    summary = _get(item, "summary") or _get(item, "description") or ""
+    raw_summary = _get(item, "summary") or _get(item, "description") or ""
     entry_id = _get(item, "id") or link or title
 
     if not title or not link:
         return None
 
-    # Truncate overly long summaries
-    summary = summary[:800]
+    # 调用清洗函数，去除 HTML 杂质
+    clean_summary = clean_html_content(raw_summary)
+
+    # Truncate overly long summaries (基于清洗后的纯文本截断)
+    clean_summary = clean_summary[:800]
 
     return FeedEntry(
         source=source_name,
         title=title,
         link=link,
-        summary=summary,
+        summary=clean_summary,
         id=entry_id,
     )
 

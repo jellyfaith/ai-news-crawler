@@ -9,7 +9,7 @@ class Config:
     # LLM
     LLM_API_KEY: str = os.environ.get("LLM_API_KEY", "")
     LLM_BASE_URL: str = os.environ.get("LLM_BASE_URL") or "https://api.deepseek.com/v1"
-    LLM_MODEL: str = os.environ.get("LLM_MODEL", "deepseek-chat")
+    LLM_MODEL: str = os.environ.get("LLM_MODEL") or "deepseek-reasoner"
 
     # Blog repo
     MY_BLOG_REPO_TOKEN: str = os.environ.get("MY_BLOG_REPO_TOKEN", "")
@@ -20,8 +20,7 @@ class Config:
     # RSS sources
     RSS_SOURCES: list[dict[str, str]] = [
         {"name": "HuggingFace", "url": "https://huggingface.co/blog/feed.xml"},
-        {"name": "Google AI", "url": "https://blog.google/technology/ai/rss/"},
-        {"name": "Anthropic", "url": "https://www.anthropic.com/blog/rss.xml"},
+        {"name": "Google AI", "url": "https://blog.google/technology/ai/rss/"}
     ]
 
     # State
