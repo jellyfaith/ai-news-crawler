@@ -34,7 +34,7 @@ def main() -> None:
 
     state = StateManager()
 
-    # 1. 获取所有未处理的 RSS 条目
+    # 1. Fetch RSS — entries are already limited per source
     all_entries = fetch_all(state)
     if not all_entries:
         logger.info("No new entries — nothing to do.")
@@ -42,22 +42,21 @@ def main() -> None:
 
     all_entry_ids = [e.id for e in all_entries]
 
-    # 限制只把最新的 10 条发给 LLM，省钱且防报错
-    entries_to_process = all_entries[:10]
+    # 2. LLM: picks 2~3 from these entries and writes full articles
+    articles = summarize_batch(all_entries)
 
-    logger.info("Fetched %d entries, but only processing the top %d ...", len(all_entries), len(entries_to_process))
+    if not articles:
+        logger.warning("LLM returned no articles — skipping.")
+        return
 
-    # 2. LLM 处理
-    summaries = summarize_batch(entries_to_process)
-
-    # 3. 生成本地的 .md 文件
+    # 3. Generate .md files locally
     output_dir = f".out/{date.today().isoformat()}"
-    files = generate_md(entries_to_process, summaries, output_dir)
+    files = generate_md(articles, output_dir)
 
-    # 4. 跨仓库推送到你的博客
+    # 4. Push to blog repo
     push_files(files)
 
-    # 5. 保存状态（把今天抓到的所有 700 多条历史记录全部标记为已读）
+    # 5. Mark all fetched entries as processed (dedup)
     state.mark_batch(all_entry_ids)
     state.save()
 

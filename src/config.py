@@ -23,6 +23,10 @@ class Config:
         {"name": "Google AI", "url": "https://blog.google/technology/ai/rss/"}
     ]
 
+    # Limits
+    MAX_ENTRIES_PER_SOURCE: int = 5   # 每个 RSS 源最多取前 N 条
+    MAX_ARTICLES: int = 3              # LLM 最多写几篇文章
+
     # State
     STATE_FILE: str = "processed_state.json"
 

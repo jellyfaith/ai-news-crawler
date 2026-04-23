@@ -41,18 +41,30 @@ def clean_html_content(raw_content: str) -> str:
 
 
 def fetch_all(state: StateManager) -> list[FeedEntry]:
-    """Iterate configured RSS sources and return new (unprocessed) entries."""
+    """Iterate configured RSS sources and return new (unprocessed) entries.
+
+    Each source is limited to ``Config.MAX_ENTRIES_PER_SOURCE`` items.
+    """
     entries: list[FeedEntry] = []
     for source in Config.RSS_SOURCES:
+        source_count = 0
         try:
             raw = _fetch_feed(source["url"])
             for item in raw:
                 entry = _parse_item(item, source["name"])
                 if entry is not None and not state.is_processed(entry.id):
                     entries.append(entry)
+                    source_count += 1
+                    if source_count >= Config.MAX_ENTRIES_PER_SOURCE:
+                        break
         except Exception:
             logger.exception("Failed to fetch RSS from %s (%s)", source["name"], source["url"])
-    logger.info("Fetched %d new entries from %d sources", len(entries), len(Config.RSS_SOURCES))
+    logger.info(
+        "Fetched %d new entries from %d sources (max %d each)",
+        len(entries),
+        len(Config.RSS_SOURCES),
+        Config.MAX_ENTRIES_PER_SOURCE,
+    )
     return entries
 
 

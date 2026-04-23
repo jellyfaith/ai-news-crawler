@@ -1,0 +1,12 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Local output directories
+.out/
+.blog_repo/
+
+# Virtual environment
+.venv/
+venv/
