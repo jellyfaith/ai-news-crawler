@@ -1,0 +1,29 @@
+name: Daily AI News Crawl
+
+on:
+  schedule:
+    # Daily at UTC 02:00 (Beijing 10:00)
+    - cron: '0 2 * * *'
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run AI News Crawler
+        run: python src/main.py
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          MY_BLOG_REPO_TOKEN: ${{ secrets.MY_BLOG_REPO_TOKEN }}
